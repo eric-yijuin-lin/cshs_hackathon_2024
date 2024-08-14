@@ -2,8 +2,8 @@ import os
 from pathlib import Path
 from datetime import datetime
 
-import gspread
-from ultralytics import YOLO
+# import gspread
+# from ultralytics import YOLO
 from flask import Flask, request, abort, render_template, flash, redirect
 
 ESP32_IMAGE_FOLDER = "./web/esp32-images/"
