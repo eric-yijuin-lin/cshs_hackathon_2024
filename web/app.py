@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from datetime import datetime
 
-# import gspread
+import gspread
 # from ultralytics import YOLO
 from flask import Flask, request, abort, render_template, flash, redirect
 
@@ -12,10 +12,10 @@ ESP32_IMAGE_FOLDER = "./web/esp32-images/"
 # yolo_model = YOLO("best.pt")
 
 # # 啟動 google 試算表
-# service_account = gspread.service_account(filename = "金鑰檔案.json")
-# work_book = service_account.open("試算表名稱")
-# log_sheet = work_book.worksheet("子表格名稱")
-print(os.getcwd())
+service_account = gspread.service_account(filename = "./credentials/google-api.json")
+work_book = service_account.open("竹山高中黑客松資料庫")
+can_sheet = work_book.worksheet("垃圾桶狀態")
+# print(os.getcwd())
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = ESP32_IMAGE_FOLDER
@@ -51,51 +51,33 @@ def test_upload():
 def home():
     return render_template("index.html")
 
-# @app.route("/detect", methods=["GET", "POST"])
-# def detect_garbage():
-#     print(request.method)
-#     if request.method == "GET":
-#         insert_command_log([])
-#         return "insert_command_log"
-#     elif request.method == "POST":
-#         # check if the post request has the file part
-#         if "file" not in request.files:
-#             flash("No file part")
-#             return 400, "No file part"
-#         file = request.files["file"]
-#         # if user does not select file, browser also
-#         # submit a empty part without filename
-#         if file.filename == "":
-#             flash("No selected file")
-#             return 400, "No selected file"
-        
-#         time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-#         file_to_save = file.filename.replace(".jpg", f"{time_str}.jpg")
-#         file.save(os.path.join(app.config["UPLOAD_FOLDER"], file_to_save))
+# https://goattl.tw/cshs/hackathon/can-data?id=CSHS1234&lat=23.76170563343541&lng=120.68148656873399&w=12.34&h=0.5678&time=1900-01-01
+# 127.0.0.1:9002/can-data?id=CSHS1234&lat=23.76170563343541&lng=120.68148656873399&w=12.34&h=0.5678
+@app.route("/can-data", methods=["GET"])
+def update_garbage_can():
+    can_id = request.args.get("id") # 垃圾桶 ID
+    lat = request.args.get("lat") # 緯度
+    lng = request.args.get("lng") # 經度
+    weight = request.args.get("w") # 重量
+    height = request.args.get("h") # 高度
+    date_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    data_row = [
+        can_id,
+        float(lat),
+        float(lng),
+        float(weight),
+        float(height),
+        date_time
+    ]
 
-#         predict_result = yolo_model.predict(file_to_save)[0]
-#         boxes = predict_result.boxes  # Boxes object for bounding box outputs
-#         masks = predict_result.masks  # Masks object for segmentation masks outputs
-#         keypoints = predict_result.keypoints  # Keypoints object for pose outputs
-#         probs = predict_result.probs  # Probs object for classification outputs
-#         obb = predict_result.obb  # Oriented boxes object for OBB outputs
-#         predict_result.show()  # display to screen
-#         predict_result.save(filename=f"./yolo-images/detect{time_str}.jpg")  # save to disk
-
-#         robot_command = "pause"
-#         if boxes[0] > 0.55:
-#             robot_command = "left"
-#         elif boxes[0] < 0.45:
-#             robot_command = "right"
-#         elif boxes[1] > 0.55:
-#             robot_command = "up"
-#         elif boxes[2] < 0.45:
-#             robot_command = "down"
-        
-#         robot_log = [time_str, "機器人ID", robot_command, "經度", "緯度"]
-        
-def insert_command_log(log_data: list):
-    print("insert_command_log ")
+    cell = can_sheet.find("debug")
+    if cell:
+        print(cell.col, cell.row)
+        update_range = f"A{cell.row}:F{cell.row}"
+        can_sheet.update( values=[data_row], range_name=update_range)
+    else:
+        can_sheet.insert_row(values=data_row, index=2)
+    return "OK"
     
 if __name__ == "__main__":
     app.run(port=9002)
