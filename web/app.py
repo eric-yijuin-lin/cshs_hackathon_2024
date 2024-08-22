@@ -4,7 +4,7 @@ from datetime import datetime
 
 import gspread
 # from ultralytics import YOLO
-from flask import Flask, request, abort, render_template, flash, redirect
+from flask import Flask, request, abort, render_template, flash
 
 ESP32_IMAGE_FOLDER = "./web/esp32-images/"
 
@@ -51,9 +51,9 @@ def test_upload():
 def home():
     return render_template("index.html")
 
-# https://goattl.tw/cshs/hackathon/can-data?id=CSHS1234&lat=23.76170563343541&lng=120.68148656873399&w=12.34&h=0.5678&time=1900-01-01
-# 127.0.0.1:9002/can-data?id=CSHS1234&lat=23.76170563343541&lng=120.68148656873399&w=12.34&h=0.5678
-@app.route("/can-data", methods=["GET"])
+# https://goattl.tw/cshs/hackathon/update-can?id=CSHS1234&lat=23.76170563343541&lng=120.68148656873399&w=12.34&h=0.5678&time=1900-01-01
+# 127.0.0.1:9002/update-can?id=CSHS1234&lat=23.76170563343541&lng=120.68148656873399&w=12.34&h=0.5678
+@app.route("/update-can", methods=["GET"])
 def update_garbage_can():
     can_id = request.args.get("id") # 垃圾桶 ID
     lat = request.args.get("lat") # 緯度
@@ -78,6 +78,11 @@ def update_garbage_can():
     else:
         can_sheet.insert_row(values=data_row, index=2)
     return "OK"
-    
+
+@app.route("/can-list")
+def get_garbage_can_list():
+    can_list = can_sheet.get_all_values()
+    return can_list[1:]
+
 if __name__ == "__main__":
     app.run(port=9002)
