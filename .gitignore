@@ -2,3 +2,4 @@
 /web/esp32-images
 test/google_map_test/test_no_git.html
 credentials/*
+*.pyc
