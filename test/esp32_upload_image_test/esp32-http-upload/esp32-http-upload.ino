@@ -98,7 +98,7 @@ void setup() {
     config.fb_count = 2;
   } else {
     config.frame_size = FRAMESIZE_CIF;
-    config.jpeg_quality = 12;  //0-63 lower number means higher quality
+    config.jpeg_quality = 2;  //0-63 lower number means higher quality
     config.fb_count = 1;
   }
   
@@ -139,7 +139,7 @@ void testHttpGet() {
   WiFiClientSecure *client_s = new WiFiClientSecure;
   if(client_s) {
     client_s->setInsecure();
-    String query = "https://902c-2001-b400-e255-b5a6-2446-196f-633-368d.ngrok-free.app/hello";
+    String query = serverName + "/hello";
     HTTPClient https;
     Serial.println("[GET] " + query);
     if (https.begin(*client_s, query)) {
@@ -193,7 +193,7 @@ void testPhoto() {
   WiFiClientSecure *client_s = new WiFiClientSecure;
   if(client_s) {
     client_s->setInsecure();
-    String query = "https://9ab7-2001-b400-e255-b5a6-b433-2ab5-f384-e41f.ngrok-free.app/test_upload";
+    String query = serverName + "/esp32-upload";
     HTTPClient https;
     Serial.println("[POST] " + query);
     if (https.begin(*client_s, query)) {
