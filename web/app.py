@@ -36,7 +36,7 @@ can_sheet = work_book.worksheet("垃圾桶狀態")
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = ESP32_IMAGE_FOLDER
-app.config["MOVE_TO_DRIVE"] = True
+app.config["MOVE_TO_DRIVE"] = False
 
 if app.config["MOVE_TO_DRIVE"] == True:
     drive_helper.upload_thread.start()
@@ -97,9 +97,8 @@ def update_garbage_can():
         date_time
     ]
 
-    cell = can_sheet.find("debug")
+    cell = can_sheet.find(id)
     if cell:
-        print(cell.col, cell.row)
         update_range = f"A{cell.row}:F{cell.row}"
         can_sheet.update(values=[data_row], range_name=update_range)
     else:
@@ -110,6 +109,31 @@ def update_garbage_can():
 def get_garbage_can_list():
     can_list = can_sheet.get_all_values()
     return can_list[1:] # 陣列從 0 開始
+
+# ready: 待命, rotate: 旋轉, dump: 倒垃圾, resume: 回復角度, full: 滿了
+@app.route("/get-status")
+def get_can_status():
+    id = request.args.get("id")
+    cell = can_sheet.find(id)
+    if cell:
+        row_values = can_sheet.row_values(cell.row)
+        status = row_values[5]
+        return status
+    else:
+        return "id not found", 400
+
+# ready: 待命, rotate: 旋轉, dump: 倒垃圾, resume: 回復角度, full: 滿了
+@app.route("/update-status")
+def update_can_status():
+    id = request.args.get("id")
+    status = request.args.get("s")
+    cell = can_sheet.find(id)
+    if cell:
+        update_range = f"G{cell.row}"
+        can_sheet.update_acell(update_range, status) # 指更新一個 cell
+        return "OK"
+    else:
+        return "id not found", 400
 
 # line 機器人的 http 請求 handler (處理函式)
 @app.route("/callback", methods=['POST'])
