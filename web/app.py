@@ -25,6 +25,7 @@ import gspread
 from flask import Flask, request, abort, render_template, flash
 
 import google_drive_helper as drive_helper
+from ai_model import predict_external_image
 
 ESP32_IMAGE_FOLDER = "./web/esp32-images/"
 
@@ -72,6 +73,26 @@ def test_upload():
         if app.config["MOVE_TO_DRIVE"] == True:
             drive_helper.enqueue_image(full_name)
         return "image saved"
+    
+@app.route("/classify-garbage", methods=["GET"])
+def classify_garbage():
+    # # 檢查照片是否正確附在 http 請求裡
+    # if "file" not in request.files:
+    #     return "No file part", 400
+    # file = request.files["file"]
+    # if file.filename == "":
+    #     return "No selected file", 400
+    
+    # # 用時間戳當作檔案名稱，並且產生要存檔的檔案路徑
+    # file_prefix = Path(file.filename).stem
+    # file_surffix = Path(file.filename).suffix
+    # time_str = datetime.now().strftime("%Y-%m-%d %H%M%S")
+    # file_name = f"{file_prefix} {time_str}{file_surffix}"
+    # full_name = os.path.join(app.config["UPLOAD_FOLDER"], file_name)
+    # file.save(full_name)
+    image_class = predict_external_image("D:/Coding/AI/Common Datasets/garbage_dataset/Garbage classification/Garbage classification/plastic/plastic51.jpg")
+    return image_class
+
 
 
 @app.route("/home", methods=["GET"])
