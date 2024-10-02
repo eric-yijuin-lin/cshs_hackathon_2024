@@ -22,7 +22,7 @@ const char* ssid = "iPhone-YJL";
 const char* password = "12345678";
 const char* canId = "CSHS1234";
 
-String serverName = "https://4e83-163-22-153-183.ngrok-free.app/";   // REPLACE WITH YOUR Raspberry Pi IP ADDRESS
+String serverName = "https://70db-163-22-153-183.ngrok-free.app/";   // REPLACE WITH YOUR Raspberry Pi IP ADDRESS
 //String serverName = "example.com";   // OR REPLACE WITH YOUR DOMAIN NAME
 
 
@@ -122,30 +122,24 @@ void setup() {
 
 void loop() {
   String canCommand = getGarbageCanCommand(canId);
-  if (canCommand == "full") {
-    delay(1000);
+  if (canCommand == "" || canCommand == "full") {
+    delay(10000);
     return;
-  }
-  
-  int ir_read = digitalRead(IR_GPIO_NUM);
-  Serial.print("ir_read=");
-  Serial.println(ir_read);
-  if (ir_read == 1) {
-    delay(1000);
-    return;
-  }
- else if (canCommand == "ready") {
+  } else if (canCommand == "ready") {
     int ir_read = digitalRead(IR_GPIO_NUM);
     while (ir_read == 1) { // 紅外線讀到 1 代表沒有遮擋，繼續等待
       delay(1000);
-      int ir_read = digitalRead(IR_GPIO_NUM);
+      ir_read = digitalRead(IR_GPIO_NUM);
+      Serial.print("ir_read=");
+      Serial.println(ir_read);
     }
     String garbageClass = classifyGarbage();
     String rotateCommand = getRotateCommand(garbageClass);
     updateGarbageCanCommand(canId, rotateCommand);
-  } else if (canCommand == "dummy") {
+  } else if (canCommand == "dump") {
     dumpGarbage();
     updateGarbageCanCommand(canId, "resume");
+    delay(2000);
   }
 }
 
@@ -207,7 +201,7 @@ String classifyGarbage() {
   WiFiClientSecure *client_s = new WiFiClientSecure;
   if(client_s) {
     client_s->setInsecure();
-    String query = serverName + "/esp32-upload";
+    String query = serverName + "/classify-garbage";
     HTTPClient https;
     Serial.println("[POST] " + query);
     if (https.begin(*client_s, query)) {
@@ -235,6 +229,7 @@ String classifyGarbage() {
 
 String getGarbageCanCommand(String id) {
   WiFiClientSecure *client_s = new WiFiClientSecure;
+  String command = "";
   if(client_s) {
       client_s->setInsecure();
       String query = serverName + "/get-command?id=" + id;
@@ -245,20 +240,20 @@ String getGarbageCanCommand(String id) {
       if (httpCode > 0) {
       Serial.printf("[STATUS CODE] %d\n", httpCode);
           if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
-              String payload = https.getString();
-              Serial.printf("[RESPONSE] %s\n", payload);
-              return payload;
+              command = https.getString();
+              Serial.printf("[RESPONSE] %s\n", command);
           }
       }
       else {
           Serial.printf("[ERROR]: %s\n", https.errorToString(httpCode).c_str());
       }
       https.end();
-      }
+    }
   }
   else {
       Serial.printf("[HTTPS] Unable to connect\n");
   }
+  return command;
 }
 
 String getRotateCommand(String garbageClass) {
@@ -266,7 +261,7 @@ String getRotateCommand(String garbageClass) {
     return "rotate45";
   else if (garbageClass == "glass")
     return "rotate165";
-  else if (garbageClass == "plastic")
+  else if (garbageClass == "metal")
     return "rotate285";
   else
     return "rotate0";

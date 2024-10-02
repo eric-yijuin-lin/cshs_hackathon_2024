@@ -74,23 +74,26 @@ def test_upload():
             drive_helper.enqueue_image(full_name)
         return "image saved"
     
-@app.route("/classify-garbage", methods=["GET"])
+@app.route("/classify-garbage", methods=["GET", "POST"])
 def classify_garbage():
     # # 檢查照片是否正確附在 http 請求裡
-    # if "file" not in request.files:
-    #     return "No file part", 400
-    # file = request.files["file"]
-    # if file.filename == "":
-    #     return "No selected file", 400
+    if "file" not in request.files:
+        return "No file part", 400
+    file = request.files["file"]
+    if file.filename == "":
+        return "No selected file", 400
     
     # # 用時間戳當作檔案名稱，並且產生要存檔的檔案路徑
-    # file_prefix = Path(file.filename).stem
-    # file_surffix = Path(file.filename).suffix
-    # time_str = datetime.now().strftime("%Y-%m-%d %H%M%S")
-    # file_name = f"{file_prefix} {time_str}{file_surffix}"
-    # full_name = os.path.join(app.config["UPLOAD_FOLDER"], file_name)
-    # file.save(full_name)
-    image_class = predict_external_image("D:/Coding/AI/Common Datasets/garbage_dataset/Garbage classification/Garbage classification/plastic/plastic51.jpg")
+    file_prefix = Path(file.filename).stem
+    file_surffix = Path(file.filename).suffix
+    time_str = datetime.now().strftime("%Y-%m-%d %H%M%S")
+    file_name = f"{file_prefix} {time_str}{file_surffix}"
+    full_name = os.path.join(app.config["UPLOAD_FOLDER"], file_name)
+    file.save(full_name)
+
+    image_class = predict_external_image(full_name)
+    image_class = "plastic"
+    print("garbage class:", image_class)
     return image_class
 
 
@@ -131,27 +134,27 @@ def get_garbage_can_list():
     can_list = can_sheet.get_all_values()
     return can_list[1:] # 陣列從 0 開始
 
-# ready: 待命, rotate: 旋轉, dump: 倒垃圾, resume: 回復角度, full: 滿了
-@app.route("/get-status")
-def get_can_status():
+# ready: 待命, rotate: 旋轉 N度, dump: 倒垃圾, resume: 回復旋轉角度, full: 滿了
+@app.route("/get-command")
+def get_can_command():
     id = request.args.get("id")
     cell = can_sheet.find(id)
     if cell:
         row_values = can_sheet.row_values(cell.row)
-        status = row_values[5]
-        return status
+        command = row_values[6]
+        return command
     else:
         return "id not found", 400
 
-# ready: 待命, rotate: 旋轉, dump: 倒垃圾, resume: 回復角度, full: 滿了
-@app.route("/update-status")
-def update_can_status():
+# ready: 待命, rotate: 旋轉 N度, dump: 倒垃圾, resume: 回復旋轉角度, full: 滿了
+@app.route("/update-command")
+def update_can_command():
     id = request.args.get("id")
-    status = request.args.get("s")
+    command = request.args.get("cmd")
     cell = can_sheet.find(id)
     if cell:
         update_range = f"G{cell.row}"
-        can_sheet.update_acell(update_range, status) # 指更新一個 cell
+        can_sheet.update_acell(update_range, command) # 指更新一個 cell
         return "OK"
     else:
         return "id not found", 400
