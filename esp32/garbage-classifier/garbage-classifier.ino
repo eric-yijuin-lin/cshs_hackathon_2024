@@ -22,7 +22,7 @@ const char* ssid = "iPhone-YJL";
 const char* password = "12345678";
 const char* canId = "CSHS1234";
 
-String serverName = "https://70db-163-22-153-183.ngrok-free.app/";   // REPLACE WITH YOUR Raspberry Pi IP ADDRESS
+String serverName = "https://db70-2001-b400-e4d5-9dc1-95f1-3e31-268e-eb76.ngrok-free.app/";   // REPLACE WITH YOUR Raspberry Pi IP ADDRESS
 //String serverName = "example.com";   // OR REPLACE WITH YOUR DOMAIN NAME
 
 
@@ -123,15 +123,32 @@ void setup() {
 void loop() {
   String canCommand = getGarbageCanCommand(canId);
   if (canCommand == "" || canCommand == "full") {
+    Serial.println("no command or is full");
     delay(10000);
     return;
   } else if (canCommand == "ready") {
-    int ir_read = digitalRead(IR_GPIO_NUM);
-    while (ir_read == 1) { // 紅外線讀到 1 代表沒有遮擋，繼續等待
-      delay(1000);
-      ir_read = digitalRead(IR_GPIO_NUM);
-      Serial.print("ir_read=");
-      Serial.println(ir_read);
+    while (1) {
+      int ir_read = digitalRead(IR_GPIO_NUM);
+      if (ir_read == 1) { // 紅外線讀到 1 代表沒有遮擋，繼續等待
+        delay(1000);
+        Serial.print("ir_read = ");
+        Serial.println(ir_read);
+        continue;
+      } else {
+        // 第一次讀到 0，代表紅外線被遮擋，開始連續偵測五次，並對 ir_count 做加總，確定垃圾被放上來
+        int ir_count = 0;
+        for (int i = 0; i < 5; i++){
+          ir_count += digitalRead(IR_GPIO_NUM);
+          delay(1000);
+          Serial.print("ir_count = ");
+          Serial.println(ir_count);
+        }
+        // 只要 ir_count 不等於零，就重新偵測否則強制離開 while 迴圈，開始拍照
+        if (ir_count != 0) 
+          continue;
+        else 
+          break;
+      }
     }
     String garbageClass = classifyGarbage();
     String rotateCommand = getRotateCommand(garbageClass);
@@ -295,18 +312,28 @@ void updateGarbageCanCommand(String id, String command) {
 }
 
 void dumpGarbage() {
+  // for(int posDegrees = 30; posDegrees <= 120; posDegrees++) {
+  //   servo1.write(posDegrees);
+  //   Serial.println(posDegrees);
+  //   delay(20);
+  // }
+  // delay(2000);
+  // servo1.attach(SERVO_PIN);
+  // for(int posDegrees = 30; posDegrees <= 120; posDegrees++) {
+  //   servo1.write(posDegrees);
+  //   Serial.println(posDegrees);
+  //   delay(20);
+  // }
   servo1.attach(SERVO_PIN);
-  for(int posDegrees = 30; posDegrees <= 120; posDegrees++) {
-    servo1.write(posDegrees);
-    Serial.println(posDegrees);
-    delay(20);
-  }
+  int a1 = 130;
+  int a2 = 100;
+  servo1.write(a1);
   delay(2000);
-  for(int posDegrees = 120; posDegrees >= 30; posDegrees--) {
-    servo1.write(posDegrees);
-    Serial.println(posDegrees);
-    delay(20);
-  }
+  Serial.println(a1);
+
+  servo1.write(a2);
+  delay(2000);
+  Serial.println(a2);
   delay(1000);
   servo1.detach();
 }
