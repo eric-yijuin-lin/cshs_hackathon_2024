@@ -80,8 +80,8 @@ class ResNet(ImageClassificationBase):
 cpu_device = torch.device('cpu')
 gpu_model = ResNet()
 cpu_model = ResNet()
-gpu_model.load_state_dict(torch.load("./ai/test_model.pt"), torch.device('cuda'))
-cpu_model.load_state_dict(torch.load("./ai/test_model.pt", map_location=cpu_device))
+gpu_model.load_state_dict(torch.load("./ai/3-class-model.pt"), torch.device('cuda'))
+cpu_model.load_state_dict(torch.load("./ai/3-class-model.pt", map_location=cpu_device))
 
 def predict_image(img, model, device=defualt_device):
     # Convert to a batch of 1
@@ -101,5 +101,5 @@ def predict_external_image(image_name):
     print(f"The image resembles {image_class}.")
     return image_class
     # print("The image resembles", predict_image(example_image, gpu_model, device=defualt_device) + ".")
-
 # predict_external_image('D:/Coding/AI/Common Datasets/garbage_dataset/Garbage classification/Garbage classification/plastic/plastic51.jpg')
+# predict_external_image('D:/Coding/竹山高中競賽/2024 山城數位黑客松/web/esp32-images/esp32-cam 2024-10-03 152235.jpg')

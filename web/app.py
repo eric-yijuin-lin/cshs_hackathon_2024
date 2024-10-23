@@ -153,7 +153,7 @@ def update_can_command():
     command = request.args.get("cmd")
     cell = can_sheet.find(id)
     if cell:
-        update_range = f"G{cell.row}"
+        update_range = f"G{cell.row}" # G5 
         can_sheet.update_acell(update_range, command) # 指更新一個 cell
         return "OK"
     else:
@@ -184,7 +184,7 @@ def notify_garbage_clean():
     cell = can_sheet.find(can_id)
     row_values = can_sheet.row_values(cell.row)
     can_name = row_values[1]
-    notify_id = row_values[4]
+    notify_id = row_values[7]
 
     with ApiClient(line_config) as api_client:
         messaging_api = MessagingApi(api_client)
