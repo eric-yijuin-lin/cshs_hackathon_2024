@@ -22,7 +22,7 @@ const char* ssid = "iPhone-YJL";
 const char* password = "12345678";
 const char* canId = "CSHS1234";
 
-String serverName = "https://db70-2001-b400-e4d5-9dc1-95f1-3e31-268e-eb76.ngrok-free.app/";   // REPLACE WITH YOUR Raspberry Pi IP ADDRESS
+String serverName = "https://8f03-163-22-153-229.ngrok-free.app";   // REPLACE WITH YOUR Raspberry Pi IP ADDRESS
 //String serverName = "example.com";   // OR REPLACE WITH YOUR DOMAIN NAME
 
 
@@ -55,8 +55,11 @@ String payloadSurfix = "\r\n--RandomNerdTutorials--\r\n";
 #define SERVO_PIN       13 // 馬達 PIN
 
 const int timerInterval = 30000;    // time between each HTTP POST image
+const int httpInterval = 2000;
 unsigned long previousMillis = 0;   // last time image was sent
 Servo servo1;
+
+WiFiClientSecure *client_s = nullptr;
 
 void setup() {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); 
@@ -74,6 +77,8 @@ void setup() {
   Serial.println();
   Serial.print("ESP32-CAM IP Address: ");
   Serial.println(WiFi.localIP());
+  client_s = new WiFiClientSecure;
+  client_s->setInsecure();
 
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
@@ -156,34 +161,6 @@ void loop() {
   } else if (canCommand == "dump") {
     dumpGarbage();
     updateGarbageCanCommand(canId, "resume");
-    delay(2000);
-  }
-}
-
-void checkConnection() {
-  WiFiClientSecure *client_s = new WiFiClientSecure;
-  if(client_s) {
-    client_s->setInsecure();
-    String query = serverName + "/hello";
-    HTTPClient https;
-    Serial.println("[GET] " + query);
-    if (https.begin(*client_s, query)) {
-      int httpCode = https.GET();
-      if (httpCode > 0) {
-       Serial.printf("[STATUS CODE] %d\n", httpCode);
-        if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
-          String payload = https.getString();
-          Serial.printf("[RESPONSE] %s\n", payload);
-        }
-      }
-      else {
-        Serial.printf("[ERROR]: %s\n", https.errorToString(httpCode).c_str());
-      }
-      https.end();
-    }
-  }
-  else {
-    Serial.printf("[HTTPS] Unable to connect\n");
   }
 }
 
@@ -215,9 +192,7 @@ String classifyGarbage() {
   memcpy(concatenated + prefixLen + fbLen, surfix, surfixLen);
     
   String garbageClass = "unknow";
-  WiFiClientSecure *client_s = new WiFiClientSecure;
   if(client_s) {
-    client_s->setInsecure();
     String query = serverName + "/classify-garbage";
     HTTPClient https;
     Serial.println("[POST] " + query);
@@ -241,21 +216,21 @@ String classifyGarbage() {
     Serial.printf("[HTTPS] Unable to connect\n");
   }
   esp_camera_fb_return(fb);
+  delete concatenated;
+  delay(httpInterval);
   return garbageClass;
 }
 
 String getGarbageCanCommand(String id) {
-  WiFiClientSecure *client_s = new WiFiClientSecure;
   String command = "";
   if(client_s) {
-      client_s->setInsecure();
       String query = serverName + "/get-command?id=" + id;
       HTTPClient https;
       Serial.println("[GET] " + query);
       if (https.begin(*client_s, query)) {
       int httpCode = https.GET();
-      if (httpCode > 0) {
       Serial.printf("[STATUS CODE] %d\n", httpCode);
+      if (httpCode > 0) {
           if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
               command = https.getString();
               Serial.printf("[RESPONSE] %s\n", command);
@@ -270,35 +245,34 @@ String getGarbageCanCommand(String id) {
   else {
       Serial.printf("[HTTPS] Unable to connect\n");
   }
+  delay(httpInterval);
   return command;
 }
 
 String getRotateCommand(String garbageClass) {
   if (garbageClass == "plastic")
-    return "rotate45";
-  else if (garbageClass == "glass")
-    return "rotate165";
+    return "rotate60";
+  else if (garbageClass == "trash")
+    return "rotate180";
   else if (garbageClass == "metal")
-    return "rotate285";
+    return "rotate300";
   else
     return "rotate0";
 }
 
 void updateGarbageCanCommand(String id, String command) {
-  WiFiClientSecure *client_s = new WiFiClientSecure;
   if(client_s) {
-      client_s->setInsecure();
       String query = serverName + "/update-command?id=" + id + "&cmd=" + command;
       HTTPClient https;
       Serial.println("[GET] " + query);
       if (https.begin(*client_s, query)) {
-      int httpCode = https.GET();
-      if (httpCode > 0) {
-      Serial.printf("[STATUS CODE] %d\n", httpCode);
-          if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
-              String payload = https.getString();
-              Serial.printf("[RESPONSE] %s\n", payload);
-          }
+        int httpCode = https.GET();
+        if (httpCode > 0) {
+        Serial.printf("[STATUS CODE] %d\n", httpCode);
+            if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
+                String payload = https.getString();
+                Serial.printf("[RESPONSE] %s\n", payload);
+            }
       }
       else {
           Serial.printf("[ERROR]: %s\n", https.errorToString(httpCode).c_str());
@@ -309,23 +283,12 @@ void updateGarbageCanCommand(String id, String command) {
   else {
       Serial.printf("[HTTPS] Unable to connect\n");
   }
+  delay(httpInterval);
 }
 
 void dumpGarbage() {
-  // for(int posDegrees = 30; posDegrees <= 120; posDegrees++) {
-  //   servo1.write(posDegrees);
-  //   Serial.println(posDegrees);
-  //   delay(20);
-  // }
-  // delay(2000);
-  // servo1.attach(SERVO_PIN);
-  // for(int posDegrees = 30; posDegrees <= 120; posDegrees++) {
-  //   servo1.write(posDegrees);
-  //   Serial.println(posDegrees);
-  //   delay(20);
-  // }
   servo1.attach(SERVO_PIN);
-  int a1 = 130;
+  int a1 = 120;
   int a2 = 100;
   servo1.write(a1);
   delay(2000);
