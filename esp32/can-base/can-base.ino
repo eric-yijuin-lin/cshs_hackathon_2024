@@ -11,7 +11,6 @@ const char* ssid = "iPhone-YJL";
 const char* password = "12345678";
 const char* canId = "CSHS1234";
 WiFiClientSecure *client_s = nullptr;
-const int httpDelay = 2000;
 
 String serverName = "https://8f03-163-22-153-229.ngrok-free.app";   // REPLACE WITH YOUR Raspberry Pi IP ADDRESS
 //String serverName = "example.com";   // OR REPLACE WITH YOUR DOMAIN NAME
@@ -28,9 +27,8 @@ const int RXD2 = 16;
 const int TXD2 = 17;
 TinyGPSPlus gps;
 HardwareSerial gpsSerial(2);
-String gps_heading = "";
-String gps_body_1 = "";
-String gps_body_2 = "";
+String gps_lat = "23.76170563"; // 緯度
+String gps_lng = "120.6814866"; // 經度
 
 // 超音波模組腳位與距離計算變數
 const int trigPin1 = 5;
@@ -42,6 +40,11 @@ const int echoPin3 = 35;
 const float soundSpeed = 0.034;
 long duration;
 float distanceCm;
+
+// 暫停各項工作的相關變數
+unsigned long lastStatusUpdateTime = 0;  // 最後一次更新垃圾桶狀態
+const unsigned long statusUpdateInterval = 60000;  // 間隔一分鐘 (60,000 毫秒)
+const int httpDelay = 2000;
 
 void setup() {
   // Serial 1, 115200Hz, debug 訊息用
@@ -95,21 +98,34 @@ void loop() {
     Serial.print("garbage distance3 = ");
     Serial.println(garbageDistance3);
 
+    if (garbageDistance1 < 10 || garbageDistance2 < 10 || garbageDistance3 < 10) {
+      updateGarbageCanCommand(canId, "full");
+      notifyGarbageClean(canId);
+      return;
+    }
+
     Serial.println("try getting location by GPS...");
     while (gpsSerial.available() > 0) {
       gps.encode(gpsSerial.read());
     }
     if (gps.location.isUpdated()) {
       gps.encode(gpsSerial.read());
-      gps_heading = "GPS Located!";
       // char gpsData = gpsSerial.read();
       // Serial.println(gpsData);
       Serial.println(gps.location.lat(), 6);
       Serial.println(gps.location.lng(), 6);
-      gps_body_1 = "lat:" + String(gps.location.lat(), 6);
-      gps_body_2 = "lng:" + String(gps.location.lng(), 6);
+      gps_lat = String(gps.location.lat(), 6);
+      gps_lng = String(gps.location.lng(), 6);
     } else {
       Serial.print("Failed to get location.");
+    }
+    
+    unsigned long currentTime = millis();
+    if (currentTime - lastStatusUpdateTime >= statusUpdateInterval) {
+      // Perform the task
+      updateCanStatus(canId, gps_lat, gps_lng, garbageDistance1, garbageDistance2, garbageDistance3);
+      // Update the last execution time to the current time
+      lastStatusUpdateTime = currentTime;
     }
   }
 }
@@ -268,4 +284,35 @@ void setTimeOfRoteateDegree(String canCommand) {
     delay(2000);
     servo1.detach();
     updateGarbageCanCommand(canId, "ready");
+}
+
+void updateCanStatus(String id, String lat, String lng, float d1, float d2, float d3) {
+  if(client_s) {
+    String query = serverName + "/update-can?"
+      + "id=" + id 
+      + "&lat=" + gps_lat 
+      + "&lng=" + gps_lng 
+      + "&d1=" + String(d1, 2) 
+      + "&d2=" + String(d2, 2) 
+      + "&d3=" + String(d3, 2);
+    HTTPClient https;
+    Serial.println("[GET] " + query);
+    if (https.begin(*client_s, query)) {
+      int httpCode = https.GET();
+      if (httpCode > 0) {
+      Serial.printf("[STATUS CODE] %d\n", httpCode);
+          if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
+              String payload = https.getString();
+              Serial.printf("[RESPONSE] %s\n", payload);
+          }
+      }
+      else {
+          Serial.printf("[ERROR]: %s\n", https.errorToString(httpCode).c_str());
+      }
+      https.end();
+    }
+  }
+  else {
+      Serial.printf("[HTTPS] Unable to connect\n");
+  }
 }
