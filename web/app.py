@@ -109,15 +109,17 @@ def update_garbage_can():
     can_id = request.args.get("id") # 垃圾桶 ID
     lat = request.args.get("lat") # 緯度
     lng = request.args.get("lng") # 經度
-    weight = request.args.get("w") # 重量
-    height = request.args.get("h") # 高度
+    distance1 = request.args.get("d1") # 塑膠超音波距離 (用來推算容量)
+    distance2 = request.args.get("d2") # 一般垃圾超音波距離 (用來推算容量)
+    distance3 = request.args.get("d3") # 金屬超音波距離 (用來推算容量)
     date_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     data_row = [
         can_id,
         float(lat),
         float(lng),
-        float(weight),
-        float(height),
+        (100 - float(distance1)) / 100,
+        (100 - float(distance2)) / 100,
+        (100 - float(distance3)) / 100,
         date_time
     ]
 
@@ -184,7 +186,9 @@ def notify_garbage_clean():
     cell = can_sheet.find(can_id)
     row_values = can_sheet.row_values(cell.row)
     can_name = row_values[1]
-    notify_id = row_values[7]
+    notify_id = row_values[9]
+    print(type(notify_id))
+    print(notify_id)
 
     with ApiClient(line_config) as api_client:
         messaging_api = MessagingApi(api_client)
@@ -193,6 +197,7 @@ def notify_garbage_clean():
             to=notify_id,
             messages=[TextMessage(text=f"{can_name} 快要滿了，請協助清運")]
         ))
+    return "OK"
 
 @hook_handler.add(FollowEvent)
 def handle_follow(event):
@@ -204,6 +209,7 @@ def handle_follow(event):
                 messages=[TextMessage(text="歡迎加入竹山高中環境清理小幫手")]
             )
         )
+    return "OK"
 
 if __name__ == "__main__":
     app.run(port=9002)

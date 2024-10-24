@@ -1,4 +1,5 @@
-const api_host = "http://127.0.0.1:9002/can-data";
+// const api_host = "http://127.0.0.1:9002/can-list";
+const api_host = "http://127.0.0.1:9002/can-list";
 let map;
 
 // The fetchData function remains the same

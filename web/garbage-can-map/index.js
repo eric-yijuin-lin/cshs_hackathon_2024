@@ -53,13 +53,17 @@ async function initMap() {
     const name = can[1];
     const lat = +can[2];
     const lng = +can[3];
-    const capacity = +can[4];
+    const plasticCapacity = can[4];
+    const trashCapacity = can[5];
+    const metalCapacity = can[6];
     mapCanList.push({
       position: new google.maps.LatLng(lat, lng),
       type: "info",
       id: id,
       name: name,
-      capacity: capacity
+      plasticCapacity: plasticCapacity,
+      trashCapacity: trashCapacity,
+      metalCapacity: metalCapacity,
     });
   }
 
@@ -78,14 +82,18 @@ async function initMap() {
           <tr>
             <th>ID</th>
             <th>名稱</th>
-            <th>容量</th>
+            <th>塑膠容量</th>
+            <th>一般容量</th>
+            <th>金屬容量</th>
         </tr>
       </thead>
       <tbody>
         <tr>
           <td>${mapCanList[i].id}</td>
           <td>${mapCanList[i].name}</td>
-          <td>${mapCanList[i].capacity}</td>
+          <td>${mapCanList[i].plasticCapacity}</td>
+          <td>${mapCanList[i].trashCapacity}</td>
+          <td>${mapCanList[i].metalCapacity}</td>
         </tr>
       </tbody>
     </table>
