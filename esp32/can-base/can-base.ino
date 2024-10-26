@@ -35,15 +35,15 @@ const int trigPin1 = 5;
 const int echoPin1 = 18;
 const int trigPin2 = 25;
 const int echoPin2 = 26;
-const int trigPin3 = 34;
-const int echoPin3 = 35;
+const int trigPin3 = 22;
+const int echoPin3 = 23;
 const float soundSpeed = 0.034;
 long duration;
 float distanceCm;
 
 // 暫停各項工作的相關變數
 unsigned long lastStatusUpdateTime = 0;  // 最後一次更新垃圾桶狀態
-const unsigned long statusUpdateInterval = 60000;  // 間隔一分鐘 (60,000 毫秒)
+const unsigned long statusUpdateInterval = 10000;  // 10 秒 (10,000 毫秒)
 const int httpDelay = 2000;
 
 void setup() {
@@ -98,12 +98,6 @@ void loop() {
     Serial.print("garbage distance3 = ");
     Serial.println(garbageDistance3);
 
-    if (garbageDistance1 < 10 || garbageDistance2 < 10 || garbageDistance3 < 10) {
-      updateGarbageCanCommand(canId, "full");
-      notifyGarbageClean(canId);
-      return;
-    }
-
     Serial.println("try getting location by GPS...");
     while (gpsSerial.available() > 0) {
       gps.encode(gpsSerial.read());
@@ -126,6 +120,11 @@ void loop() {
       updateCanStatus(canId, gps_lat, gps_lng, garbageDistance1, garbageDistance2, garbageDistance3);
       // Update the last execution time to the current time
       lastStatusUpdateTime = currentTime;
+      if (garbageDistance1 < 10 || garbageDistance2 < 10 || garbageDistance3 < 10) {
+        updateGarbageCanCommand(canId, "full");
+        notifyGarbageClean(canId);
+        return;
+      }
     }
   }
 }
