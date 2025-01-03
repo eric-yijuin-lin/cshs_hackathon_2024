@@ -20,7 +20,7 @@
 const char* ssid = "iPhone-YJL";
 const char* password = "12345678";
 
-String serverName = "https://4e83-163-22-153-183.ngrok-free.app/";   // REPLACE WITH YOUR Raspberry Pi IP ADDRESS
+String serverName = "https://9b0a-163-22-153-229.ngrok-free.app/";   // REPLACE WITH YOUR Raspberry Pi IP ADDRESS
 //String serverName = "example.com";   // OR REPLACE WITH YOUR DOMAIN NAME
 
 String serverPath = "/upload.php";     // The default serverPath should be upload.php
@@ -118,26 +118,24 @@ void setup() {
 }
 
 void loop() {
-  int ir_read = digitalRead(IR_GPIO_NUM);
-  Serial.print("ir_read=");
-  Serial.println(ir_read);
-  if (ir_read == 1) {
-    delay(20);
+  unsigned long currentMillis = millis();
+  if (!Serial.available()) {
+    Serial.println("waiting input...");
+    delay(1000);
     return;
   }
+  char c = Serial.read();
+  Serial.print("serial read: ");
+  Serial.println(c);
 
-  unsigned long currentMillis = millis();
-  if (currentMillis - previousMillis > 5000) {
-    Serial.print(currentMillis);
-    Serial.print("-");
-    Serial.print(previousMillis);
-    Serial.print("=");
-    Serial.println(currentMillis - previousMillis);
-    Serial.print("ir_read=");
-    Serial.print(ir_read);
-    Serial.println(" and time > 5000, Testing http...");
+  if (c == 't') {
     testHttpGet();
+    return;
+  }
+  else if (c == 's') {
+    testPhoto();
     previousMillis = currentMillis;
+    return;
   }
 }
 
