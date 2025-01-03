@@ -92,7 +92,6 @@ def classify_garbage():
     file.save(full_name)
 
     image_class = predict_external_image(full_name)
-    image_class = "plastic"
     print("garbage class:", image_class)
     return image_class
 
@@ -103,10 +102,10 @@ def home():
     return render_template("index.html")
 
 # https://goattl.tw/cshs/hackathon/update-can?id=CSHS1234&lat=23.76170563343541&lng=120.68148656873399&w=12.34&h=0.5678&time=1900-01-01
-# 127.0.0.1:9002/update-can?id=CSHS1234&lat=23.76170563343541&lng=120.68148656873399&w=12.34&h=0.5678
+# 127.0.0.1:9002/update-can?id=CSHS1234&lat=23.76170563&lng=120.6814866&d1=22.90&d2=271.76&d3=278.39
 @app.route("/update-can", methods=["GET"])
 def update_garbage_can():
-    can_id = request.args.get("id") # 垃圾桶 ID
+    can_id = request.args.get("id") # 垃圾桶 ID  
     lat = request.args.get("lat") # 緯度
     lng = request.args.get("lng") # 經度
     distance1 = request.args.get("d1") # 塑膠超音波距離 (用來推算容量)
@@ -114,7 +113,6 @@ def update_garbage_can():
     distance3 = request.args.get("d3") # 金屬超音波距離 (用來推算容量)
     date_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     data_row = [
-        can_id,
         float(lat),
         float(lng),
         (100 - float(distance1)) / 100,
@@ -123,9 +121,16 @@ def update_garbage_can():
         date_time
     ]
 
-    cell = can_sheet.find(id)
+    if data_row[2] < 0:
+        data_row[2] = 0
+    if data_row[3] < 0:
+        data_row[3] = 0
+    if data_row[4] < 0:
+        data_row[4] = 0
+
+    cell = can_sheet.find(can_id)
     if cell:
-        update_range = f"A{cell.row}:F{cell.row}"
+        update_range = f"C{cell.row}:H{cell.row}"
         can_sheet.update(values=[data_row], range_name=update_range)
     else:
         can_sheet.insert_row(values=data_row, index=2)
@@ -143,7 +148,7 @@ def get_can_command():
     cell = can_sheet.find(id)
     if cell:
         row_values = can_sheet.row_values(cell.row)
-        command = row_values[6]
+        command = row_values[8]
         return command
     else:
         return "id not found", 400
@@ -155,7 +160,7 @@ def update_can_command():
     command = request.args.get("cmd")
     cell = can_sheet.find(id)
     if cell:
-        update_range = f"G{cell.row}" # G5 
+        update_range = f"I{cell.row}" # I1 
         can_sheet.update_acell(update_range, command) # 指更新一個 cell
         return "OK"
     else:
@@ -209,6 +214,28 @@ def handle_follow(event):
                 messages=[TextMessage(text="歡迎加入竹山高中環境清理小幫手")]
             )
         )
+    return "OK"
+
+@hook_handler.add(MessageEvent, message=TextMessageContent)
+def handle_text_message(event):
+    with ApiClient(line_config) as api_client:
+        line_bot_api = MessagingApi(api_client)
+        user_id = event.source.user_id
+        message = event.message.text
+        reply_message = ""
+
+        if message == "查詢垃圾":
+            can_list = get_garbage_can_list()
+            for can in can_list:
+                if not can[0]:
+                    continue
+                reply_message += f"垃圾桶名稱:{can[1]}\n緯度:{can[2]}\n經度:{can[3]}\n塑膠容量:{can[4]}\n一般垃圾容量:{can[5]}\n金屬容量:{can[6]}\n最後更新:{can[7]}\n\n"
+            line_bot_api.reply_message_with_http_info(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=reply_message)]
+                )
+            )
     return "OK"
 
 if __name__ == "__main__":

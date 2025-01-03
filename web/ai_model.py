@@ -32,7 +32,7 @@ def accuracy(outputs, labels):
 
 
 defualt_device = get_default_device()
-data_dir  = 'D:/Coding/AI/Common Datasets/garbage_dataset/Garbage classification/Garbage classification'
+data_dir  = 'D:/Coding/AI/Common Datasets/garbage_dataset/Garbage classification/Garbage classification - 3 class'
 classes = os.listdir(data_dir)
 print(classes)
 transformations = transforms.Compose([transforms.Resize((256, 256)), transforms.ToTensor()])
@@ -80,8 +80,9 @@ class ResNet(ImageClassificationBase):
 cpu_device = torch.device('cpu')
 gpu_model = ResNet()
 cpu_model = ResNet()
-gpu_model.load_state_dict(torch.load("./ai/3-class-model.pt"), torch.device('cuda'))
-cpu_model.load_state_dict(torch.load("./ai/3-class-model.pt", map_location=cpu_device))
+gpu_model.load_state_dict(torch.load("./ai/model 20241025.pt"), torch.device('cuda'))
+cpu_model.load_state_dict(torch.load("./ai/model 20241025.pt", map_location=cpu_device, weights_only=True))
+cpu_model.eval()
 
 def predict_image(img, model, device=defualt_device):
     # Convert to a batch of 1
@@ -102,4 +103,16 @@ def predict_external_image(image_name):
     return image_class
     # print("The image resembles", predict_image(example_image, gpu_model, device=defualt_device) + ".")
 # predict_external_image('D:/Coding/AI/Common Datasets/garbage_dataset/Garbage classification/Garbage classification/plastic/plastic51.jpg')
-# predict_external_image('D:/Coding/竹山高中競賽/2024 山城數位黑客松/web/esp32-images/esp32-cam 2024-10-03 152235.jpg')
+
+# for i in range(1, 50):
+#     folder = 'D:/Coding/AI/Common Datasets/garbage_dataset/Garbage classification/Garbage classification - 3 class'
+#     g_class = 'plastic'
+#     file_name = f"{folder}/{g_class}/{g_class}{i}.jpg"
+#     predict_external_image(file_name)
+# folder = 'D:/Coding/竹山高中競賽/2024 山城數位黑客松/web/esp32-images/'
+# while True:
+#     file_name = input()
+#     if file_name == "exit":
+#         break
+#     file_name = folder + file_name
+#     predict_external_image(file_name)
